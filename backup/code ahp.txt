@@ -1,0 +1,111 @@
+
+    public function ahpCompute($idhipo) {
+        /*
+         * variable to use
+         */
+
+        $relation = \App\ahp_bayes_schemaModel::where('id_hipotensis', '=', $idhipo)->first();
+        BuildController::echoSystem('relation = ' . $relation->id_relation);
+
+        $categori = \App\ahp_categoriModel::all();
+        $totalcategori;
+        $totalAllCategori = 0;
+        $averageCategori;
+
+        /*
+         * get data from database
+         */
+
+        for ($isatu = 0; $isatu < count($categori); $isatu++) {
+            $totalcategori[$isatu] = 0;
+            for ($i = 0; $i < count($categori); $i++) {
+                $a = \App\aphCategoriWeightModel::where('id_categori_1', '=', $categori[$isatu]->id_categori)->where('id_categori_2', '=', $categori[$i]->id_categori)->first()->weight;
+                $b = \App\aphCategoriWeightModel::where('id_categori_1', '=', $categori[$i]->id_categori)->where('id_categori_2', '=', $categori[$isatu]->id_categori)->first()->weight;
+                $tableEvalutionWeight[$isatu][$i] = $a . '/' . $b;
+                $tableWeight[$isatu][$i] = $a / $b;
+                $totalcategori[$isatu] = $totalcategori[$isatu] + $tableWeight[$isatu][$i];
+            }
+        }
+
+        for ($i = 0; $i < count($totalcategori); $i++) {
+            $totalAllCategori = $totalcategori[$i] + $totalAllCategori;
+        }
+
+        for ($i = 0; $i < count($totalcategori); $i++) {
+            $averageCategori[$i] = $totalcategori[$i] / $totalAllCategori;
+        }
+
+        /*
+         * generate evaluation
+         * generate evaluation meta weight
+         */
+
+        $this->tampil('<table>');
+        /*
+         * head
+         */
+        $this->tampil('<tr>');
+        $this->tampil('<th>' . 'ahp' . '</th>');
+        foreach ($categori as $ct) {
+            $this->tampil('<th>' . $ct->id_categori . '</th>');
+        }
+        $this->tampil('</tr>');
+
+        /*
+         * isi data
+         */
+        for ($isatu = 0; $isatu < count($categori); $isatu++) {
+            $this->tampil('<tr>');
+            $this->tampil('<td>' . $categori[$isatu]->id_categori . '</td>');
+            for ($i = 0; $i < count($categori); $i++) {
+                $a = \App\aphCategoriWeightModel::where('id_categori_1', '=', $categori[$isatu]->id_categori)->where('id_categori_2', '=', $categori[$i]->id_categori)->first()->weight;
+                $b = \App\aphCategoriWeightModel::where('id_categori_1', '=', $categori[$i]->id_categori)->where('id_categori_2', '=', $categori[$isatu]->id_categori)->first()->weight;
+                $this->tampil('<td>');
+                $this->tampil($tableEvalutionWeight[$isatu][$i]);
+                $this->tampil('</td>');
+            }
+            $this->tampil('</tr>');
+        }
+        $this->tampil('</table>');
+
+        $this->tampil('<table>');
+
+
+
+        /*
+         * head
+         */
+        $this->tampil('<tr>');
+        $this->tampil('<th>' . 'ahp' . '</th>');
+        foreach ($categori as $ct) {
+            $this->tampil('<th>' . $ct->id_categori . '</th>');
+        }
+        $this->tampil('<th>total</th>');
+        $this->tampil('</tr>');
+
+        /*
+         * isi data
+         */
+        for ($isatu = 0; $isatu < count($categori); $isatu++) {
+            $this->tampil('<tr>');
+            $this->tampil('<td>' . $categori[$isatu]->id_categori . '</td>');
+            for ($i = 0; $i < count($categori); $i++) {
+                $this->tampil('<td>');
+                $this->tampil($tableWeight[$isatu][$i]);
+                $this->tampil('</td>');
+            }
+            $this->tampil('<td>' . $totalcategori[$isatu] . '</td>');
+            $this->tampil('</tr>');
+        }
+
+        $this->tampil('</table>');
+
+
+        $this->echoSystem($totalAllCategori);
+
+        for ($i = 0; $i < count($totalcategori); $i++) {
+            $this->echoSystem($averageCategori[$i]);
+        }
+
+        $this->echoSystem($this->max($averageCategori));
+    }

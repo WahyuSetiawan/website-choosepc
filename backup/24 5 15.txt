@@ -1,0 +1,189 @@
+/*
+    public function backupProgram() {
+        $price = \Input::get("amount") / 10000;
+        $wattageUsedForPSU = 0;
+        $rangeToleranPrice = 300;
+        $hipotesis = \App\HipotesisModel::all();
+
+        foreach ($hipotesis as $hipo) {
+            $a = \App\RuleBayesModel::where('id_hipo', $hipo->id)->lists('id_evid');
+            $rule[$hipo->id] = $a;
+            $hipotensisa[$hipo->id] = \App\HipotesisModel::find($hipo->id)->probabilitas;
+        }
+
+        $bayes = new bayesCompute(\Input::get('evidence'), $rule, $hipotensisa);
+        $global_variable = UtilController::GenerateGlobal($bayes);
+
+        //nanti menggunakan list pada laravel agar lebih mudah
+        $allocation = \DB::select('select ((allocation / 100) * :price) as com,component  from allocation_product where hipo = :hipo', ['price' => $price, 'hipo' => $bayes->getIDMax()]);
+        foreach ($allocation as $alloc) {
+            $prices[$alloc->component] = $alloc->com;
+        }
+        print_r($prices);
+        //calculate 
+        $priceup = $prices['CM001'] + ($rangeToleranPrice / 2);
+        $pricedown = 0;
+
+        $product = \DB::table('product_processor')
+                ->whereBetween('price', [$pricedown, $priceup])
+                ->get();
+        $rule = \DB::table('ahp_criteria')
+                ->where('id_component', '=', 'CM001')
+                ->lists('id_criteria');
+
+        foreach ($product as $pro) {
+            $DataCaculate = \DB::table('product_processor_detail')
+                    ->where('id_processor', '=', $pro->id_processor)
+                    ->whereIn('id_criteria', $rule)
+                    ->lists('id_subcriteria', 'id_criteria');
+
+            $jumlah['processor'][$pro->id_processor] = 0;
+            foreach ($DataCaculate as $data) {
+                $jumlah['processor'][$pro->id_processor] = $jumlah['processor'][$pro->id_processor] + $global_variable[$data];
+            }
+        }
+
+        if (isset($jumlah['processor'])) {
+            $productMax['processor'] = UtilController::getMax($jumlah['processor']);
+            $productMax['processor'] = \App\product_processorModel::find($productMax['processor']);
+            $wattageUsedForPSU = $wattageUsedForPSU + intval($productMax['processor']->consumption);
+        }
+
+        $priceup = $prices['CM002'] + ($rangeToleranPrice / 2);
+        $pricedown = 0;
+
+        $depent = \DB::table('ahp_criteria')
+                ->leftJoin('product_processor_detail', 'product_processor_detail.id_criteria', '=', 'ahp_criteria.id_criteria')
+                ->whereNotNull('depend_component')
+                ->having('product_processor_detail.id_processor', '=', $productMax['processor'])
+                ->first();
+
+        $product = \DB::table('product_mobo')
+                ->join('product_mobo_detail', 'product_mobo_detail.id_mobo', '=', 'product_mobo.id_mobo')
+                ->whereBetween('price', [$pricedown, $priceup])
+                ->where('socket', '=', $productMax['processor']->socket)
+                ->select(\DB::raw('DISTINCT(product_mobo.id_mobo)'))
+                ->get();
+
+        $rule = \DB::table('ahp_criteria')
+                ->where('id_component', '=', 'CM002')
+                ->lists('id_criteria');
+
+        foreach ($product as $pro) {
+            $DataCaculate = \DB::table('product_mobo_detail')
+                    ->where('id_mobo', '=', $pro->id_mobo)
+                    ->whereIn('id_criteria', $rule)
+                    ->lists('id_subcriteria', 'id_criteria');
+            $jumlah['Motherboard'][$pro->id_mobo] = 0;
+            foreach ($DataCaculate as $data) {
+                $jumlah['Motherboard'][$pro->id_mobo] = $jumlah['Motherboard'][$pro->id_mobo] + $global_variable[$data];
+            }
+        }
+
+        if (isset($jumlah['Motherboard'])) {
+            $productMax['Motherboard'] = UtilController::getMax($jumlah['Motherboard']);
+            $productMax['Motherboard'] = \App\product_moboModel::find($productMax['Motherboard']);
+            $wattageUsedForPSU = $wattageUsedForPSU + intval($productMax['Motherboard']->consumption);
+        }
+
+        $priceup = $prices['CM003'] + ($rangeToleranPrice / 2);
+        $pricedown = 0;
+
+        $product = \DB::table('product_vga')
+                ->join('product_vga_detail', 'product_vga_detail.id_vga', '=', 'product_vga.id_vga')
+                ->whereBetween('price', [$pricedown, $priceup])
+                ->select(\DB::raw('DISTINCT(product_vga.id_vga)'))
+                ->get();
+
+        $rule = \DB::table('ahp_criteria')
+                ->where('id_component', '=', 'CM003')
+                ->lists('id_criteria');
+
+        foreach ($product as $pro) {
+            $DataCaculate = \DB::table('product_vga_detail')
+                    ->where('id_vga', '=', $pro->id_vga)
+                    ->whereIn('id_criteria', $rule)
+                    ->lists('id_subcriteria', 'id_criteria');
+            $jumlah['vga'][$pro->id_vga] = 0;
+            foreach ($DataCaculate as $data) {
+                $jumlah['vga'][$pro->id_vga] = $jumlah['vga'][$pro->id_vga] + $global_variable[$data];
+            }
+        }
+
+        if (isset($jumlah['vga'])) {
+            $productMax['vga'] = UtilController::getMax($jumlah['vga']);
+            $productMax['vga'] = \App\product_vgaModel::find($productMax['vga']);
+            $wattageUsedForPSU = $wattageUsedForPSU + intval($productMax['vga']->consumption);
+        }
+
+        $priceup = $prices['CM005'] + ($rangeToleranPrice / 2);
+        $pricedown = 0;
+
+        $product = \DB::table('product_ram')
+                ->join('product_ram_detail', 'product_ram_detail.id_ram', '=', 'product_ram.id_ram')
+                ->whereBetween('price', [$pricedown, $priceup])
+                ->select(\DB::raw('DISTINCT(product_ram.id_ram)'))
+                ->get();
+
+        $rule = \DB::table('ahp_criteria')
+                ->where('id_component', '=', 'CM005')
+                ->lists('id_criteria');
+
+        foreach ($product as $pro) {
+            $DataCaculate = \DB::table('product_ram_detail')
+                    ->where('id_ram', '=', $pro->id_ram)
+                    ->whereIn('id_criteria', $rule)
+                    ->lists('id_subcriteria', 'id_criteria');
+
+            $jumlah['ram'][$pro->id_ram] = 0;
+            foreach ($DataCaculate as $data) {
+                $jumlah['ram'][$pro->id_ram] = $jumlah['ram'][$pro->id_ram] + $global_variable[$data];
+            }
+        }
+
+        if (isset($jumlah['ram'])) {
+            $productMax['ram'] = UtilController::getMax($jumlah['ram']);
+            $productMax['ram'] = \App\product_ramModel::find($productMax['ram']);
+            $wattageUsedForPSU = $wattageUsedForPSU + intval($productMax['ram']->consumption);
+        }
+        $priceup = $prices['CM004'] + ($rangeToleranPrice / 2);
+        $pricedown = 0;
+
+        $product = \DB::table('product_hdd')
+                ->join('product_hdd_detail', 'product_hdd_detail.id_hdd', '=', 'product_hdd.id_hdd')
+                ->whereBetween('price', [$pricedown, $priceup])
+                ->select(\DB::raw('DISTINCT(product_hdd.id_hdd)'))
+                ->get();
+
+        $rule = \DB::table('ahp_criteria')
+                ->where('id_component', '=', 'CM004')
+                ->lists('id_criteria');
+
+        foreach ($product as $pro) {
+            $DataCaculate = \DB::table('product_hdd_detail')
+                    ->where('id_hdd', '=', $pro->id_hdd)
+                    ->whereIn('id_criteria', $rule)
+                    ->lists('id_subcriteria', 'id_criteria');
+
+            $jumlah['hdd'][$pro->id_hdd] = 0;
+            foreach ($DataCaculate as $data) {
+                $jumlah['hdd'][$pro->id_hdd] = $jumlah['hdd'][$pro->id_hdd] + $global_variable[$data];
+            }
+        }
+
+        if (isset($jumlah['hdd'])) {
+            $productMax['hdd'] = UtilController::getMax($jumlah['hdd']);
+            $productMax['hdd'] = \App\product_hddModel::find($productMax['hdd']);
+            $wattageUsedForPSU = $wattageUsedForPSU + intval($productMax['hdd']->consumption);
+        }
+
+        $psu = \DB::table('product_psu')->where('wattage', '>', $wattageUsedForPSU)->orderBy('price', 'asc')->first();
+
+        $bayesConvert = UtilController::convertHeader($bayes->getElementProbabilitas());
+
+        return view('client/builder/result')
+                        ->with('wattage', $wattageUsedForPSU)
+                        ->with('psu', $psu)
+                        ->with('bayes', $bayesConvert)
+                        ->with('product', $productMax);
+    }*/

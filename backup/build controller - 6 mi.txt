@@ -1,0 +1,23 @@
+
+        foreach($bay as $b){
+            echo $b->id_component;
+            $component = UtilController::arrayCriteria($bayes->getIDMax(),$b->id_component);
+            $ahpcom = new AhpCompute($component, null);
+            $egC = $ahpcom->getEigenvektor();
+            $ahpcom->showtable($ahpcom->getTableAfterNormal());
+            $j = 0;
+            foreach($comp as $com){
+                echo $com->id_criteria;
+                $sub = \App\ahp_subcriteriaModel::where('id_criteria',$com->id_criteria)->get();
+                $criteria = UtilController::arraySubCriteria($bayes->getIDMax(),$com->id_criteria);
+                $ahpcrit = new AhpCompute($criteria);
+                $egS = $ahpcrit->getEigenvektor();
+                $ahpcrit->showtable($ahpcrit->getTableAfterNormal());
+                $i = 0;
+                foreach ($sub as $s){
+                    $global_variable[$s->id_sub] = (($egC[$j]) * ($egS[$i++])) * 100;
+                }
+                $j++;
+            }
+            break;
+        }

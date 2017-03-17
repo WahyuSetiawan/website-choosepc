@@ -1,0 +1,263 @@
+<?php
+
+namespace App\Http\Controllers;
+
+class AhpCompute {
+
+    private $weight;
+    private $criteria;
+    private $alternative;
+    private $weightNormal;
+    private $rootOfProduct;
+    private $priorityVector;
+    private $priorityRow;
+    private $lamdaMax;
+    private $sumRow;
+    private $CI;
+    private $RI;
+    private $CR;
+    private $ConsistensyRatio = array(0.00, 0.00, 0.58, 1.12, 1.24, 1.32, 1.41, 1.46, 1.49);
+
+    function __construct($criteria, $alternatif) {
+        $this->criteria = $criteria;
+        $this->alternative = $alternatif;
+        $this->compute($criteria, $alternatif);
+    }
+
+    function compute($criteria, $alternatif){
+        echo "ahp computer";
+        echo '<pre>';
+        var_dump($criteria);
+        echo '</pre>';
+        $a = $this->pairwise($criteria);
+        $beforeNormal = $a;
+        $this->showtable($a);
+        $a = $this->normalization($a);
+        $this->showtable($a);      
+        $r = $this->sumRow($a);
+        $b = $this->eigenvektor($a);
+        $c = $this->sumMatrix($beforeNormal);
+        $d = $this->lamdaMax($b, $c);
+        $e = $this->CI($criteria, $d);
+        
+        echo '<pre>';
+        var_dump($this->sumArray($b));
+        var_dump($c);
+        var_dump($e);
+        var_dump($b);
+        echo '</pre>';
+    }
+    
+    function CI($matrix, $lamdamax){
+        return ($lamdamax - count($matrix))/(count($matrix) - 1);
+    }
+    
+    function lamdaMax($eigenvektor, $summatrix) {
+        $sum = 0;
+        for($i = 0; $i <count($eigenvektor); $i++){
+            $sum = ($eigenvektor[$i] * $summatrix[$i]) + $sum;
+        }
+        
+        return $sum;
+    }
+    
+    function sumMatrix($matrix) {
+        $result;
+        $keys = array_keys($matrix);
+        var_dump($keys);
+        for ($i = 0; $i < count($matrix); $i++) {
+            $sum = 0;
+            for ($j = 0; $j < count($matrix[$keys[$i]]); $j++) {
+                $sum = $matrix[$keys[$j]][$i] + $sum;
+            }
+            $result[$i] = $sum;
+        }
+
+        return $result;
+    }
+
+    function showtable($matrix) {
+        echo '<table border=1>';
+        $keys = array_keys($matrix);
+        echo '<tr><td></td>';
+        
+        for ($i = 0; $i < count($matrix); $i++) {
+            echo '<td>'.$i.'</td>';
+        }
+        echo '</tr>';
+        
+        for ($i = 0; $i < count($matrix); $i++) {
+            echo '<tr>';
+            echo '<td>'.$i.'</td>';
+            for ($j = 0; $j < count($matrix[$keys[$i]]); $j++) {
+                echo '<td>' . $matrix[$keys[$i]][$j] . '</td>';
+            }
+            echo '</tr>';
+        }
+        echo '</table>';
+    }
+
+    function sumArray($array) {
+        $sum = 0;
+        for ($i = 0; $i < count($array); $i++) {
+            $sum = $array[$i] + $sum;
+        }
+        return $sum;
+    }
+
+    function eigenvektor($matrix) {
+        $result;
+        //$sumMatrix = $this->sumArray($this->sumMatrix($matrix));
+        $sumMatrix = count($matrix);
+        /*
+        for ($i = 0; $i < count($matrix); $i++) {
+            $sum = 0;
+            for ($j = 0; $j < count($matrix[$i]); $j++) {
+                $sum = $matrix[$i][$j] + $sum;
+            }
+            $result[$i] = $sum / $sumMatrix ;
+        }*/
+        for ($i = 0; $i < count($matrix); $i++) {
+            $sum = 0;
+            for ($j = 0; $j < count($matrix[$i]); $j++) {
+                $sum = $matrix[$i][$j] + $sum;
+            }
+            $result[$i] = $sum / $sumMatrix ;
+        }
+
+        return $result;
+    }
+
+    function pairwise($criteria) {
+        $result;
+        
+        $keys = array_keys($criteria);
+        for ($i = 0; $i < count($criteria); $i++) {
+            $iweight = 0;
+            for ($k = 0; $k < $i; $k++) {
+                echo $criteria[$keys[$k]][$i - $k][0];
+                if($criteria[$keys[$k]][$i - $k][0] == 0){
+                    $result[$keys[$i]][$iweight++] = 1/$criteria[$keys[$k]][$i - $k][1];
+                }else{
+                    $result[$keys[$i]][$iweight++] = ($criteria[$keys[$k]][$i - $k][1]);
+                }
+            }
+            for ($j = 0; $j < count($criteria[$keys[$i]]); $j++) {
+                if($criteria[$keys[$i]][$j][0] == 0){
+                    $result[$keys[$i]][$iweight++] = $criteria[$keys[$i]][$j][1];
+                }else{
+                    $result[$keys[$i]][$iweight++] = 1/$criteria[$keys[$i]][$j][1];
+                }
+            }
+        }
+        return $result;
+    }
+
+    function sumRow($matrix) {
+        $result;
+
+        for ($i = 0; $i < count($matrix[0]); $i++) {
+            $sum = 0;
+            for ($j = 0; $j < count($matrix); $j++) {
+                $sum = $sum + $matrix[$j][$i];
+            }
+            $result[$i] = $sum;
+        }
+        return $result;
+    }
+
+    /*
+     * 
+     * 
+     * rumus
+     * 
+     * 
+     */
+
+    function prorityRow($sumRow, $priorityVector) {
+        for ($i = 0; $i < count($sumRow); $i++) {
+            $result[$i] = $sumRow[$i] * $priorityVector[$i];
+        }
+        return $result;
+    }
+
+    
+
+    function CRcompute($CI, $RI) {
+        return $CI / $RI;
+    }
+
+    function rootOfProduct($matrix) {
+        for ($i = 0; $i < count($matrix); $i++) {
+            $total[$i] = 1;
+            for ($k = 0; $k < count($matrix[$i]); $k++) {
+                $total[$i] = $total[$i] + $matrix[$i][$k];
+                //$total[$i] = $total[$i] * $matrix[$i][$k];
+            }
+        }
+
+        return $total;
+    }
+
+    function priorityVector($array) {
+        $sum = 0;
+        for ($i = 0; $i < count($array); $i++) {
+            $sum = $array[$i] + $sum;
+        }
+
+        for ($i = 0; $i < count($array); $i++) {
+            $array[$i] = $array[$i] / $sum;
+        }
+
+        return $array;
+    }
+
+    function normalization($matrix) {
+        $result;
+        $sumCriteria;
+        $keys = array_keys($matrix);
+
+        for ($i = 0; $i < count($matrix); $i++) {
+            $sum = 0;
+            for ($k = 0; $k < count($matrix[$keys[$i]]); $k++) {
+                $sum = $sum + $matrix[$keys[$k]][$i];
+            }
+            $sumCriteria[$i] = $sum;
+        }
+
+        for ($i = 0; $i < count($matrix); $i++) {
+            for ($k = 0; $k < count($matrix[$keys[$i]]); $k++) {
+                $result[$k][$i] = $matrix[$keys[$k]][$i] / $sumCriteria[$i];
+            }
+        }
+
+        return $result;
+    }
+
+    function square($matrix) {
+        $result;
+        for ($i = 0; $i < count($matrix); $i++) {
+            for ($k = 0; $k < count($matrix[$i]); $k++) {
+                $sum = 0;
+                for ($j = 0; $j < count($matrix[$i]); $j++) {
+                    $sum = $sum + ($matrix[$i][$j] * $matrix[$j][$k]);
+                }
+                $result [$i][$k] = $sum;
+            }
+        }
+        return $result;
+    }
+
+    /*
+     * 
+     * util
+     * 
+     */
+
+    function show($a) {
+        echo '<pre>';
+        var_dump($a);
+        echo '<pre>';
+    }
+
+}

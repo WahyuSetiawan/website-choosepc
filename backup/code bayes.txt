@@ -1,0 +1,52 @@
+       
+        /*
+         * 
+         */
+        $evidence = \Input::get('evidence');
+        $hipotesis = \App\HipotesisModel::all();
+        $index = count($hipotesis);
+
+        $maxprobabilitas = 0;
+
+        for ($i = 0; $i < $index; $i++) {
+            $count = 0;
+            foreach ($evidence as $key) {
+                $result = \App\RuleBayesModel::where('id_hipo', '=', $hipotesis[$i]->id)->where('id_evid', '=', $key)->first();
+                if (!is_null($result)) {
+                    $count++;
+                }
+            }
+            $resultTrue[$i] = $count;
+        }
+
+        foreach ($resultTrue as $value) {
+            $this->echoSystem('nilai kebenaran = ' . $value);
+        }
+
+        for ($i = 0; $i < $index; $i++) {
+            $resultTrue[$i] = $resultTrue[$i] / count(\App\RuleBayesModel::where('id_hipo', '=', $hipotesis[$i]->id)->get());
+        }
+
+        foreach ($resultTrue as $value) {
+            $this->echoSystem('hasil kebenaran = ' . $value);
+        }
+
+        $probabilitasAll = 0;
+
+        for ($i = 0; $i < $index; $i++) {
+            $probabilitasAll = $probabilitasAll + ($hipotesis[$i]->probabilitas * $resultTrue[$i]);
+        }
+        $this->echoSystem('<br>' . $probabilitasAll);
+        echo '<br>masing<br>';
+
+        for ($i = 0; $i < $index; $i++) {
+            $probabilitasArray[$i] = ($hipotesis[$i]->probabilitas * $resultTrue[$i]) / $probabilitasAll;
+            echo ($probabilitasArray[$i] * 100) . "<br>";
+        }
+
+
+        $maxprobabilitas = $this->max($probabilitasArray);
+        $this->echoSystem('maxprob = ' . $maxprobabilitas);
+        $this->echoSystem('array maximal = ' . array_search($maxprobabilitas, $probabilitasArray));
+        $result = $hipotesis[array_search($maxprobabilitas, $probabilitasArray)]->name;
+        $this->echoSystem($result);
